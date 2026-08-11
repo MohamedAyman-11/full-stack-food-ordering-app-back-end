@@ -59,25 +59,61 @@ model Address {
 }
 
 model Product {
-  id          String      @id @default(uuid())
-  name        String
-  slug        String      @unique
-  image       Json
-  price       Decimal
-  discount    Decimal?
-  description String
-  isAvailable Boolean     @default(true)
-  category_id String
-  category    Category    @relation(fields: [category_id], references: [id])
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
-  orderItems  OrderItem[]
+  id            String         @id @default(uuid())
+  name          String
+  slug          String         @unique
+  image         Json
+  price         Decimal
+  discount      Decimal?
+  description   String
+  isAvailable   Boolean        @default(true)
+  category_id   String
+  category      Category       @relation(fields: [category_id], references: [id])
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+  orderItems    OrderItem[]
+  productSizes  ProductSize[]
+  productExtras ProductExtra[]
+}
+
+model Size {
+  id           String        @id @default(uuid())
+  name         String
+  productSizes ProductSize[]
+}
+
+model ProductSize {
+  size_id    String
+  sizes      Size    @relation(fields: [size_id], references: [id])
+  product_id String
+  product    Product @relation(fields: [product_id], references: [id])
+  price      Decimal
+
+  @@id([size_id, product_id])
+}
+
+model Extra {
+  id            String         @id @default(uuid())
+  name          String
+  price         Decimal
+  productExtras ProductExtra[]
+}
+
+model ProductExtra {
+  extra_id   String
+  extra      Extra   @relation(fields: [extra_id], references: [id])
+  product_id String
+  product    Product @relation(fields: [product_id], references: [id])
+  price      Decimal
+
+  @@id([extra_id, product_id])
 }
 
 model Category {
   id       String    @id @default(uuid())
   name     String    @unique
   products Product[]
+  image    Json
 }
 
 model Order {
