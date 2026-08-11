@@ -6,3 +6,119 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  DELIVERY_BOY
+}
+
+enum OrderStatus {
+  PLACED
+  CONFIRMED
+  PREPARING
+  READY_FOR_PICKUP
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id               String    @id @default(uuid())
+  name             String
+  email            String    @unique
+  password         String
+  role             Role      @default(CUSTOMER)
+  primary_phone    String
+  secondary_phone  String?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+  addresses        Address[]
+  ordersAsCustomer Order[]   @relation("Ordering")
+  ordersAsDelivery Order[]   @relation("Delivery")
+}
+
+model Address {
+  id              String  @id @default(uuid())
+  governorate     String?
+  city            String?
+  area            String?
+  street          String?
+  building_number Int?
+  apartment       String?
+  floor           String?
+  user_id         String
+  user            User    @relation(fields: [user_id], references: [id])
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  name        String
+  slug        String      @unique
+  image       Json
+  price       Decimal
+  discount    Decimal?
+  description String
+  isAvailable Boolean     @default(true)
+  category_id String
+  category    Category    @relation(fields: [category_id], references: [id])
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+  orderItems  OrderItem[]
+}
+
+model Category {
+  id       String    @id @default(uuid())
+  name     String    @unique
+  products Product[]
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  total_price     Decimal
+  discount        Decimal?
+  taxes           Decimal?
+  subtotal        Decimal
+  delivery_fee    Decimal?
+  status          OrderStatus @default(PLACED)
+  governorate     String
+  city            String
+  area            String?
+  street          String
+  building_number Int?
+  apartment       String?
+  floor           String?
+  delivery_boy_id String?
+  delivery_boy    User?       @relation("Delivery", fields: [delivery_boy_id], references: [id])
+  user_id         String
+  user            User        @relation("Ordering", fields: [user_id], references: [id])
+  orderItems      OrderItem[]
+  payment         Payment?
+}
+
+model OrderItem {
+  order_id    String
+  order       Order   @relation(fields: [order_id], references: [id])
+  product_id  String
+  product     Product @relation(fields: [product_id], references: [id])
+  quantity    Int
+  total_price Decimal
+  unit_price  Decimal
+
+  @@id([order_id, product_id])
+}
+
+model Payment {
+  id       String        @id @default(uuid())
+  amount   Decimal
+  status   PaymentStatus @default(PENDING)
+  order_id String        @unique
+  order    Order         @relation(fields: [order_id], references: [id])
+}
