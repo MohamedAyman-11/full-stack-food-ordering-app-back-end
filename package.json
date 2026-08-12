@@ -5,7 +5,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "NODE_ENV=development nodemon --exec tsx server.ts",
+    "prod": " NODE_ENV=production nodemon --exec tsx server.ts"
   },
   "keywords": [],
   "author": "",
@@ -13,8 +14,10 @@
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.2.0",
     "@types/node": "^26.2.0",
     "@types/pg": "^8.21.0",
+    "@types/streamifier": "^0.1.2",
     "nodemon": "^3.1.14",
     "prisma": "^7.9.1",
     "slugify": "^1.6.9",
@@ -24,9 +27,12 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "cloudinary": "^2.10.0",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "pg": "^8.23.0"
+    "multer": "^2.2.0",
+    "pg": "^8.23.0",
+    "streamifier": "^0.1.1"
   }
 }
