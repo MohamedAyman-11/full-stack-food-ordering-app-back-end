@@ -46,7 +46,7 @@ model User {
 }
 
 model Address {
-  id              String  @id @default(uuid())
+  id              String   @id @default(uuid())
   governorate     String?
   city            String?
   area            String?
@@ -55,7 +55,9 @@ model Address {
   apartment       String?
   floor           String?
   user_id         String
-  user            User    @relation(fields: [user_id], references: [id])
+  user            User     @relation(fields: [user_id], references: [id])
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 }
 
 model Product {
@@ -80,14 +82,18 @@ model Size {
   id           String        @id @default(uuid())
   name         String
   productSizes ProductSize[]
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
 }
 
 model ProductSize {
   size_id    String
-  sizes      Size    @relation(fields: [size_id], references: [id])
+  sizes      Size     @relation(fields: [size_id], references: [id])
   product_id String
-  product    Product @relation(fields: [product_id], references: [id])
+  product    Product  @relation(fields: [product_id], references: [id])
   price      Decimal
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   @@id([size_id, product_id])
 }
@@ -97,23 +103,29 @@ model Extra {
   name          String
   price         Decimal
   productExtras ProductExtra[]
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
 }
 
 model ProductExtra {
   extra_id   String
-  extra      Extra   @relation(fields: [extra_id], references: [id])
+  extra      Extra    @relation(fields: [extra_id], references: [id])
   product_id String
-  product    Product @relation(fields: [product_id], references: [id])
+  product    Product  @relation(fields: [product_id], references: [id])
   price      Decimal
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   @@id([extra_id, product_id])
 }
 
 model Category {
-  id       String    @id @default(uuid())
-  name     String    @unique
-  products Product[]
-  image    Json
+  id         String    @id @default(uuid())
+  name       String    @unique
+  products   Product[]
+  image      Json
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
 }
 
 model Order {
@@ -137,24 +149,30 @@ model Order {
   user            User        @relation("Ordering", fields: [user_id], references: [id])
   orderItems      OrderItem[]
   payment         Payment?
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
 }
 
 model OrderItem {
   order_id    String
-  order       Order   @relation(fields: [order_id], references: [id])
+  order       Order    @relation(fields: [order_id], references: [id])
   product_id  String
-  product     Product @relation(fields: [product_id], references: [id])
+  product     Product  @relation(fields: [product_id], references: [id])
   quantity    Int
   total_price Decimal
   unit_price  Decimal
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
 
   @@id([order_id, product_id])
 }
 
 model Payment {
-  id       String        @id @default(uuid())
-  amount   Decimal
-  status   PaymentStatus @default(PENDING)
-  order_id String        @unique
-  order    Order         @relation(fields: [order_id], references: [id])
+  id         String        @id @default(uuid())
+  amount     Decimal
+  status     PaymentStatus @default(PENDING)
+  order_id   String        @unique
+  order      Order         @relation(fields: [order_id], references: [id])
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
 }
