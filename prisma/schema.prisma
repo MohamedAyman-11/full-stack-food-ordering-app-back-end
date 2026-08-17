@@ -7,6 +7,187 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id               String         @id @default(uuid())
+  firstName        String
+  lastName         String
+  email            String         @unique
+  provider         AuthProvider   @default(LOCAL)
+  password         String?
+  role             Role           @default(CUSTOMER)
+  picture          Json?
+  googleId         String?        @unique
+  primaryPhone     String?
+  secondaryPhone   String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  addresses        Address[]
+  ordersAsDelivery Order[]        @relation("Delivery")
+  ordersAsCustomer Order[]        @relation("Ordering")
+  refreshTokens    RefreshToken[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Address {
+  id             String   @id @default(uuid())
+  governorate    String?
+  city           String?
+  area           String?
+  street         String?
+  buildingNumber Int?
+  apartment      String?
+  floor          String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Product {
+  id            String         @id @default(uuid())
+  name          String
+  slug          String         @unique
+  image         Json
+  price         Decimal
+  discount      Decimal?       @default(0)
+  description   String
+  isAvailable   Boolean        @default(true)
+  categoryId    String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  orderItems    OrderItem[]
+  category      Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  productExtras ProductExtra[]
+  productSizes  ProductSize[]
+}
+
+model Size {
+  id           String         @id @default(uuid())
+  name         String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  categorySize CategorySize[]
+  productSize  ProductSize[]
+}
+
+model ProductSize {
+  sizeId    String
+  productId String
+  price     Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size      Size     @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+
+  @@id([sizeId, productId])
+}
+
+model Extra {
+  id             String          @id @default(uuid())
+  name           String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  categoryExtras CategoryExtra[]
+  productExtras  ProductExtra[]
+}
+
+model ProductExtra {
+  extraId   String
+  productId String
+  price     Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  extra     Extra    @relation(fields: [extraId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([extraId, productId])
+}
+
+model Category {
+  id             String          @id @default(uuid())
+  name           String          @unique
+  createdAt      DateTime        @default(now())
+  image          Json
+  updatedAt      DateTime        @updatedAt
+  categoryExtras CategoryExtra[]
+  categorySizes  CategorySize[]
+  products       Product[]
+}
+
+model CategorySize {
+  categoryId String
+  sizeId     String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  size       Size     @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+
+  @@id([categoryId, sizeId])
+}
+
+model CategoryExtra {
+  categoryId String
+  extraId    String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  extra      Extra    @relation(fields: [extraId], references: [id], onDelete: Cascade)
+
+  @@id([categoryId, extraId])
+}
+
+model Order {
+  id             String      @id @default(uuid())
+  totalPrice     Decimal
+  discount       Decimal?
+  taxes          Decimal?
+  subtotal       Decimal
+  deliveryFee    Decimal?
+  status         OrderStatus @default(PLACED)
+  governorate    String
+  city           String
+  area           String?
+  street         String
+  buildingNumber Int?
+  apartment      String?
+  floor          String?
+  deliveryBoyId  String?
+  userId         String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  delivery_boy   User?       @relation("Delivery", fields: [deliveryBoyId], references: [id])
+  user           User        @relation("Ordering", fields: [userId], references: [id])
+  orderItems     OrderItem[]
+  payment        Payment?
+}
+
+model OrderItem {
+  orderId     String
+  productId   String
+  quantity    Int
+  totalPrice  Decimal
+  unitPrice   Decimal
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orderItemId String   @id @default(uuid())
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id        String        @id @default(uuid())
+  amount    Decimal
+  status    PaymentStatus @default(PENDING)
+  orderId   String        @unique
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  order     Order         @relation(fields: [orderId], references: [id])
+}
+
 enum Role {
   CUSTOMER
   ADMIN
@@ -30,149 +211,7 @@ enum PaymentStatus {
   REFUNDED
 }
 
-model User {
-  id               String    @id @default(uuid())
-  name             String
-  email            String    @unique
-  password         String
-  role             Role      @default(CUSTOMER)
-  primary_phone    String
-  secondary_phone  String?
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
-  addresses        Address[]
-  ordersAsCustomer Order[]   @relation("Ordering")
-  ordersAsDelivery Order[]   @relation("Delivery")
-}
-
-model Address {
-  id              String   @id @default(uuid())
-  governorate     String?
-  city            String?
-  area            String?
-  street          String?
-  building_number Int?
-  apartment       String?
-  floor           String?
-  user_id         String
-  user            User     @relation(fields: [user_id], references: [id])
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-}
-
-model Product {
-  id            String         @id @default(uuid())
-  name          String
-  slug          String         @unique
-  image         Json
-  price         Decimal
-  discount      Decimal?
-  description   String
-  isAvailable   Boolean        @default(true)
-  category_id   String
-  category      Category       @relation(fields: [category_id], references: [id])
-  created_at    DateTime       @default(now())
-  updated_at    DateTime       @updatedAt
-  orderItems    OrderItem[]
-  productSizes  ProductSize[]
-  productExtras ProductExtra[]
-}
-
-model Size {
-  id           String        @id @default(uuid())
-  name         String
-  productSizes ProductSize[]
-  created_at   DateTime      @default(now())
-  updated_at   DateTime      @updatedAt
-}
-
-model ProductSize {
-  size_id    String
-  sizes      Size     @relation(fields: [size_id], references: [id])
-  product_id String
-  product    Product  @relation(fields: [product_id], references: [id])
-  price      Decimal
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  @@id([size_id, product_id])
-}
-
-model Extra {
-  id            String         @id @default(uuid())
-  name          String
-  price         Decimal
-  productExtras ProductExtra[]
-  created_at    DateTime       @default(now())
-  updated_at    DateTime       @updatedAt
-}
-
-model ProductExtra {
-  extra_id   String
-  extra      Extra    @relation(fields: [extra_id], references: [id])
-  product_id String
-  product    Product  @relation(fields: [product_id], references: [id])
-  price      Decimal
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  @@id([extra_id, product_id])
-}
-
-model Category {
-  id         String    @id @default(uuid())
-  name       String    @unique
-  products   Product[]
-  image      Json
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
-}
-
-model Order {
-  id              String      @id @default(uuid())
-  total_price     Decimal
-  discount        Decimal?
-  taxes           Decimal?
-  subtotal        Decimal
-  delivery_fee    Decimal?
-  status          OrderStatus @default(PLACED)
-  governorate     String
-  city            String
-  area            String?
-  street          String
-  building_number Int?
-  apartment       String?
-  floor           String?
-  delivery_boy_id String?
-  delivery_boy    User?       @relation("Delivery", fields: [delivery_boy_id], references: [id])
-  user_id         String
-  user            User        @relation("Ordering", fields: [user_id], references: [id])
-  orderItems      OrderItem[]
-  payment         Payment?
-  created_at      DateTime    @default(now())
-  updated_at      DateTime    @updatedAt
-}
-
-model OrderItem {
-  order_id    String
-  order       Order    @relation(fields: [order_id], references: [id])
-  product_id  String
-  product     Product  @relation(fields: [product_id], references: [id])
-  quantity    Int
-  total_price Decimal
-  unit_price  Decimal
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-
-  @@id([order_id, product_id])
-}
-
-model Payment {
-  id         String        @id @default(uuid())
-  amount     Decimal
-  status     PaymentStatus @default(PENDING)
-  order_id   String        @unique
-  order      Order         @relation(fields: [order_id], references: [id])
-  created_at DateTime      @default(now())
-  updated_at DateTime      @updatedAt
+enum AuthProvider {
+  GOOGLE
+  LOCAL
 }
