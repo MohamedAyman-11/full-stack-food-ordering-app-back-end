@@ -9,6 +9,11 @@ interface SendToken {
   maxAge?: number;
   tokenName: string;
 }
+type GenerateAndSendTokens = {
+  userId: string;
+  res: Response;
+  remember?: boolean;
+};
 export const generateHash = async (value: string) => {
   const hashedValue = await bcrypt.hash(value, 12);
   return hashedValue;
@@ -44,11 +49,7 @@ export const generateAndSendTokens = async ({
   userId,
   res,
   remember,
-}: {
-  userId: string;
-  res: Response;
-  remember?: boolean;
-}) => {
+}: GenerateAndSendTokens) => {
   const accessToken = generateAccessToken(userId);
   const refreshToken = generateRefreshToken();
   const hashedRefreshToken = crypto

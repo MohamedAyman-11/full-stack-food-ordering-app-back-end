@@ -5,10 +5,8 @@ import db from "../lib/prisma";
 import { AppError } from "../utils/appError";
 import {
   compareHash,
-  generateAccessToken,
   generateAndSendTokens,
   generateHash,
-  generateRefreshToken,
 } from "../utils/handlers";
 import { OAuth2Client } from "google-auth-library";
 
@@ -54,7 +52,7 @@ export const loginService = async (
   if (!email || !password) {
     throw new AppError({
       statusCode: 400,
-      message: "Email and password are required ",
+      message: "Email and password are required!",
     });
   }
   const existingUser = await db.user.findUnique({ where: { email } });
