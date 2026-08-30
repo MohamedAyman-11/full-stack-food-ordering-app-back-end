@@ -4,17 +4,40 @@ import {
   deleteCategory,
   getCategories,
   getCategoriesWithProducts,
+  getCategory,
+  getCategoryOptions,
   updateCategory,
 } from "../controllers/categoriesController";
 import upload from "../middlewares/upload";
+import { protect, restrictTo } from "../middlewares/authMiddlewares";
+import { validate } from "../middlewares/validate";
+import { createCategorySchema, updateCategorySchema } from "../validations";
+
 const router = express.Router();
+
 router
   .route("/")
   .get(getCategories)
-  .post(upload.single("category_image"), createCategory);
+  .post(
+    protect,
+    restrictTo("admin"),
+    upload.single("category_image"),
+    validate(createCategorySchema),
+    createCategory,
+  );
+
 router.get("/with-products", getCategoriesWithProducts);
+router.get("/:id/options", protect, restrictTo("admin"), getCategoryOptions);
 router
   .route("/:id")
-  .patch(upload.single("category_image"), updateCategory)
-  .delete(deleteCategory);
+  .get(protect, restrictTo("admin"), getCategory)
+  .patch(
+    protect,
+    restrictTo("admin"),
+    upload.single("category_image"),
+    validate(updateCategorySchema),
+    updateCategory,
+  )
+  .delete(protect, restrictTo("admin"), deleteCategory);
+
 export default router;

@@ -8,23 +8,36 @@ datasource db {
 }
 
 model User {
-  id               String         @id @default(uuid())
-  firstName        String
-  lastName         String
-  email            String         @unique
-  provider         AuthProvider   @default(LOCAL)
-  password         String?
-  role             Role           @default(CUSTOMER)
-  picture          Json?
-  googleId         String?        @unique
-  primaryPhone     String?
-  secondaryPhone   String?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  addresses        Address[]
-  ordersAsDelivery Order[]        @relation("Delivery")
-  ordersAsCustomer Order[]        @relation("Ordering")
-  refreshTokens    RefreshToken[]
+  id                  String               @id @default(uuid())
+  firstName           String
+  lastName            String
+  email               String               @unique
+  provider            AuthProvider         @default(LOCAL)
+  password            String?
+  role                Role                 @default(CUSTOMER)
+  picture             Json?
+  googleId            String?              @unique
+  primaryPhone        String?
+  secondaryPhone      String?
+  city                String?
+  country             String?
+  street              String?
+  postalCode          String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  ordersAsCustomer    Order[]              @relation("Ordering")
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model RefreshToken {
@@ -34,21 +47,6 @@ model RefreshToken {
   expiresAt DateTime
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Address {
-  id             String   @id @default(uuid())
-  governorate    String?
-  city           String?
-  area           String?
-  street         String?
-  buildingNumber Int?
-  apartment      String?
-  floor          String?
-  userId         String
-  user           User     @relation(fields: [userId], references: [id])
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
 }
 
 model Product {
@@ -141,28 +139,22 @@ model CategoryExtra {
 }
 
 model Order {
-  id             String      @id @default(uuid())
-  totalPrice     Decimal
-  discount       Decimal?
-  taxes          Decimal?
-  subtotal       Decimal
-  deliveryFee    Decimal?
-  status         OrderStatus @default(PLACED)
-  governorate    String
-  city           String
-  area           String?
-  street         String
-  buildingNumber Int?
-  apartment      String?
-  floor          String?
-  deliveryBoyId  String?
-  userId         String
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  delivery_boy   User?       @relation("Delivery", fields: [deliveryBoyId], references: [id])
-  user           User        @relation("Ordering", fields: [userId], references: [id])
-  orderItems     OrderItem[]
-  payment        Payment?
+  id          String      @id @default(uuid())
+  totalPrice  Decimal
+  discount    Decimal?
+  taxes       Decimal?
+  subtotal    Decimal
+  deliveryFee Decimal?
+  city        String?
+  country     String?
+  street      String?
+  postalCode  Int?
+  userId      String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  user        User        @relation("Ordering", fields: [userId], references: [id])
+  orderItems  OrderItem[]
+  payment     Payment?
 }
 
 model OrderItem {
@@ -181,7 +173,7 @@ model OrderItem {
 model Payment {
   id        String        @id @default(uuid())
   amount    Decimal
-  status    PaymentStatus @default(PENDING)
+  status    PaymentStatus @default(NOT_PAID)
   orderId   String        @unique
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
@@ -191,24 +183,11 @@ model Payment {
 enum Role {
   CUSTOMER
   ADMIN
-  DELIVERY_BOY
-}
-
-enum OrderStatus {
-  PLACED
-  CONFIRMED
-  PREPARING
-  READY_FOR_PICKUP
-  OUT_FOR_DELIVERY
-  DELIVERED
-  CANCELLED
 }
 
 enum PaymentStatus {
-  PENDING
   PAID
-  FAILED
-  REFUNDED
+  NOT_PAID
 }
 
 enum AuthProvider {

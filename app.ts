@@ -6,6 +6,8 @@ import categoriesRouter from "./routes/categoriesRouter";
 import sizesRouter from "./routes/sizeRouter";
 import extrasRouter from "./routes/extraRouter";
 import authRouter from "./routes/authRouter";
+import userRouter from "./routes/userRouter";
+import adminRouter from "./routes/adminRouter";
 import { globalErrorHandler } from "./controllers/globalErrorHandler";
 import { AppError } from "./utils/appError";
 const app = express();
@@ -25,6 +27,8 @@ app.use((req, res, next) => {
   next();
 });
 app.use(`${API_PREFIX}/auth`, authRouter);
+app.use(`${API_PREFIX}/admin`, adminRouter);
+app.use(`${API_PREFIX}/users`, userRouter);
 app.use(`${API_PREFIX}/products`, productRouter);
 app.use(`${API_PREFIX}/categories`, categoriesRouter);
 app.use(`${API_PREFIX}/sizes`, sizesRouter);

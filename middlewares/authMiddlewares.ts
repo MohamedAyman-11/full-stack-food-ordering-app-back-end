@@ -9,9 +9,11 @@ export const protect = async (
   next: NextFunction,
 ) => {
   const authHeaders = req.headers.authorization;
+
   let token = authHeaders?.startsWith("Bearer ")
     ? authHeaders.split(" ")[1]
     : req.cookies.accessToken;
+
   if (!token)
     return next(
       new AppError({
@@ -19,10 +21,15 @@ export const protect = async (
         message: "You are not logged in! Please log in to get access.",
       }),
     );
+
   const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET!) as {
     userId: string;
   };
-  const freshUser = await db.user.findUnique({ where: { id: decoded.userId } });
+
+  const freshUser = await db.user.findUnique({
+    where: { id: decoded.userId },
+  });
+
   if (!freshUser) {
     return next(
       new AppError({
@@ -31,6 +38,24 @@ export const protect = async (
       }),
     );
   }
+
   req.user = freshUser;
   next();
+};
+
+export const restrictTo = (...roles: string[]) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const userRole = req.user?.role.toLowerCase();
+    const allowedRoles = roles.map((role) => role.toLowerCase());
+
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      return next(
+        new AppError({
+          message: "You are not authorized to access this route",
+          statusCode: 403,
+        }),
+      );
+    }
+    next();
+  };
 };

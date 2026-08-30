@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import * as categoryServices from "../services/category.service";
-import db from "../lib/prisma";
 
 export const getCategories = async (req: Request, res: Response) => {
   const { categories, count } = await categoryServices.getCategoriesService();
+
   res.status(200).json({
     status: "success",
     results: count,
@@ -12,12 +12,14 @@ export const getCategories = async (req: Request, res: Response) => {
     },
   });
 };
+
 export const getCategoriesWithProducts = async (
   req: Request,
   res: Response,
 ) => {
   const { categories, count } =
     await categoryServices.getCategoriesWithProductsService();
+
   res.status(200).json({
     status: "success",
     results: count,
@@ -26,20 +28,30 @@ export const getCategoriesWithProducts = async (
     },
   });
 };
-export const createCategory = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  const sizeIds = JSON.parse(req.body.sizeIds);
-  const extraIds = JSON.parse(req.body.extraIds);
-  const category = await categoryServices.createCategoryService(
-    req.body,
-    req,
-    next,
-    sizeIds,
+
+export const getCategory = async (req: Request, res: Response) => {
+  const category = await categoryServices.getCategory({
+    id: req.params.id as string,
+  });
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      category,
+    },
+  });
+};
+
+export const createCategory = async (req: Request, res: Response) => {
+  const sizeIds = req.body.sizeIds ? req.body.sizeIds : undefined;
+  const extraIds = req.body.extraIds ? req.body.extraIds : undefined;
+
+  const category = await categoryServices.createCategoryService({
     extraIds,
-  );
+    sizeIds,
+    name: req.body.name,
+    buffer: req.file?.buffer,
+  });
 
   res.status(201).json({
     status: "success",
@@ -48,16 +60,19 @@ export const createCategory = async (
     },
   });
 };
+
 export const updateCategory = async (req: Request, res: Response) => {
-  const sizeIds = req.body.sizeIds ? JSON.parse(req.body.sizeIds) : undefined;
-  const extraIds = req.body.sizeIds ? JSON.parse(req.body.extraIds) : undefined;
-  const category = await categoryServices.updateCategoryService(
-    req.params.id as string,
-    req.body,
-    req,
-    sizeIds,
-    extraIds,
-  );
+  const sizeIds = req.body.sizeIds ? req.body.sizeIds : undefined;
+  const extraIds = req.body.extraIds ? req.body.extraIds : undefined;
+
+  const category = await categoryServices.updateCategoryService({
+    id: req.params.id as string,
+    buffer: req.file ? req.file.buffer : undefined,
+    data: req.body,
+    extraIds: extraIds,
+    sizeIds: sizeIds,
+  });
+
   res.status(200).json({
     status: "success",
     data: {
@@ -65,12 +80,26 @@ export const updateCategory = async (req: Request, res: Response) => {
     },
   });
 };
+
 export const deleteCategory = async (req: Request, res: Response) => {
-  await db.category.deleteMany();
-  await db.product.deleteMany();
   await categoryServices.deleteCategoryService(req.params.id as string);
+
   res.status(204).json({
     status: "success",
     data: {},
+  });
+};
+
+export const getCategoryOptions = async (req: Request, res: Response) => {
+  const { sizes, extras } = await categoryServices.getCategoryOptionsService(
+    req.params.id as string,
+  );
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      sizes,
+      extras,
+    },
   });
 };

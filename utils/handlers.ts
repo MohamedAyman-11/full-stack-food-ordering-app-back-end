@@ -11,23 +11,24 @@ interface SendToken {
 }
 type GenerateAndSendTokens = {
   userId: string;
-  res: Response;
-  remember?: boolean;
 };
+
 export const generateHash = async (value: string) => {
   const hashedValue = await bcrypt.hash(value, 12);
   return hashedValue;
 };
+
 export const compareHash = async (value: string, hashedValue: string) => {
   return await bcrypt.compare(value, hashedValue);
 };
+
 export const generateAccessToken = (userId: string) => {
   const accessToken = jwt.sign(
     {
       userId,
     },
     process.env.ACCESS_TOKEN_SECRET!,
-    { expiresIn: "15m" },
+    { expiresIn: "30d" },
   );
   return accessToken;
 };
@@ -36,6 +37,7 @@ export const generateRefreshToken = () => {
   const refreshToken = crypto.randomBytes(32).toString("hex");
   return refreshToken;
 };
+
 export const sendToken = ({ token, res, maxAge, tokenName }: SendToken) => {
   res.cookie(`${tokenName}`, token, {
     httpOnly: true,
@@ -45,17 +47,14 @@ export const sendToken = ({ token, res, maxAge, tokenName }: SendToken) => {
   });
 };
 
-export const generateAndSendTokens = async ({
-  userId,
-  res,
-  remember,
-}: GenerateAndSendTokens) => {
+export const generateTokens = async ({ userId }: GenerateAndSendTokens) => {
   const accessToken = generateAccessToken(userId);
   const refreshToken = generateRefreshToken();
   const hashedRefreshToken = crypto
     .createHash("sha256")
     .update(refreshToken)
     .digest("hex");
+
   await db.refreshToken.create({
     data: {
       userId,
@@ -63,16 +62,6 @@ export const generateAndSendTokens = async ({
       tokenHash: hashedRefreshToken,
     },
   });
-  sendToken({
-    token: accessToken,
-    tokenName: "accessToken",
-    maxAge: 15 * 60 * 1000,
-    res,
-  });
-  sendToken({
-    token: refreshToken,
-    tokenName: "refreshToken",
-    ...(remember && { maxAge: 30 * 24 * 60 * 60 * 1000 }),
-    res,
-  });
+
+  return { accessToken, refreshToken };
 };

@@ -1,6 +1,7 @@
 import cloudinary from "../config/cloudinary";
 import { UploadApiResponse } from "cloudinary";
 import streamifier from "streamifier";
+import { AppError } from "./appError";
 const uploadImage = (
   buffer: Buffer,
   folder: string,
@@ -11,7 +12,9 @@ const uploadImage = (
       (err, callResult) => {
         if (err) return reject(err);
         if (!callResult) {
-          return reject(new Error("Image upload failed"));
+          return reject(
+            new AppError({ message: "Image upload failed", statusCode: 500 }),
+          );
         }
         resolve(callResult);
       },

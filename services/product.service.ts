@@ -4,103 +4,142 @@ import uploadImage from "../utils/uploadImage";
 import { Product } from "../generated/prisma/client";
 import db from "../lib/prisma";
 import slugify from "slugify";
+import { type ProductSchemaType } from "../validations/index";
+import { deleteImage } from "../utils/deleteImage";
+
 type Size = {
   id: string;
   price: number;
 };
+
 type Extra = {
   id: string;
   price: number;
 };
-export const createProductService = async (req: Request) => {
-  const { categoryId, discount, description, name, price } = req.body;
-  if (!req.body.sizes || !req.body.extras) {
-    throw new AppError({
-      statusCode: 400,
-      message: "Sizes and extras are required",
-    });
-  }
-  const sizes: Size[] = JSON.parse(req.body.sizes);
-  const extras: Extra[] = JSON.parse(req.body.extras);
+interface CreateProduct {
+  buffer?: Buffer;
+  data: ProductSchemaType;
+}
+
+export const createProductService = async ({ buffer, data }: CreateProduct) => {
+  const {
+    category,
+    discount,
+    description,
+    name,
+    price,
+    extras,
+    sizes,
+    isAvailable,
+  } = data;
+
   const [allowedSizes, allowedExtras] = await Promise.all([
     db.categorySize.findMany({
       where: {
-        categoryId,
+        categoryId: category,
       },
       select: { sizeId: true },
     }),
     db.categoryExtra.findMany({
       where: {
-        categoryId,
+        categoryId: category,
       },
       select: {
         extraId: true,
       },
     }),
   ]);
+
   const allowedSizeIds = new Set(allowedSizes.map((item) => item.sizeId));
   const allowedExtraIds = new Set(allowedExtras.map((item) => item.extraId));
-  const invalidSize = sizes.find((item) => !allowedSizeIds.has(item.id));
-  const invalidExtra = extras.find((item) => !allowedExtraIds.has(item.id));
-  if (invalidSize) {
+
+  if (sizes) {
+    const invalidSize = sizes.find((item) => !allowedSizeIds.has(item.id));
+
+    if (invalidSize) {
+      throw new AppError({
+        statusCode: 400,
+        message: "One or more sizes are not available for this category",
+      });
+    }
+  }
+
+  if (extras) {
+    const invalidExtra = extras.find((item) => !allowedExtraIds.has(item.id));
+
+    if (invalidExtra) {
+      throw new AppError({
+        statusCode: 400,
+        message: "One or more extras are not available for this category",
+      });
+    }
+  }
+
+  if (!buffer) {
     throw new AppError({
       statusCode: 400,
-      message: "One or more sizes are not available for this category",
+      message: "Product image is required!",
     });
   }
-  if (invalidExtra) {
-    throw new AppError({
-      statusCode: 400,
-      message: "One or more extras are not available for this category",
-    });
-  }
-  const file = req.file;
-  if (!file)
-    throw new AppError({
-      statusCode: 400,
-      message: "Product image is required",
-    });
-  const { url, public_id } = await uploadImage(file.buffer, "Products");
-  const slug = slugify(name, { lower: true, trim: true });
-  const product = await db.product.create({
-    data: {
-      name,
-      description,
-      price: Number(price),
-      discount: Number(discount),
-      image: { url, public_id },
-      slug,
-      category: {
-        connect: {
-          id: categoryId,
+
+  let image;
+  try {
+    const { url, public_id } = await uploadImage(buffer, "Products");
+    image = { url, public_id };
+
+    const product = await db.$transaction(async (tx) => {
+      return tx.product.create({
+        data: {
+          name,
+          description,
+          price: String(price),
+          discount: String(discount),
+          image: {
+            url,
+            public_id,
+          },
+          slug: slugify(name, {
+            lower: true,
+            trim: true,
+          }),
+          categoryId: category,
+          isAvailable,
+
+          productSizes: sizes
+            ? {
+                create: sizes.map((size) => ({
+                  size: {
+                    connect: {
+                      id: size.id,
+                    },
+                  },
+                  price: String(size.price),
+                })),
+              }
+            : undefined,
+
+          productExtras: extras
+            ? {
+                create: extras.map((extra) => ({
+                  extra: {
+                    connect: {
+                      id: extra.id,
+                    },
+                  },
+                  price: String(extra.price),
+                })),
+              }
+            : undefined,
         },
-      },
-      productSizes: {
-        create: sizes.map((size) => ({
-          price: size.price,
-          size: {
-            connect: {
-              id: size.id,
-            },
-          },
-        })),
-      },
-      productExtras: {
-        create: extras.map((extra) => ({
-          price: extra.price,
-          extra: {
-            connect: {
-              id: extra.id,
-            },
-          },
-        })),
-      },
-    },
-    include: {
-      category: true,
-    },
-  });
-  return product;
+      });
+    });
+
+    return product;
+  } catch (error) {
+    if (image?.public_id) {
+      await deleteImage(image.public_id);
+    }
+  }
 };
 
 export const getProductService = async (id: string) => {
@@ -134,4 +173,19 @@ export const getProductService = async (id: string) => {
   if (!product)
     throw new AppError({ statusCode: 404, message: "Product not found" });
   return product;
+};
+
+export const getProductsService = async () => {
+  const products = await db.product.findMany();
+  return products;
+};
+
+export const deleteProductService = async (id: string) => {
+  const product = await db.product.findUnique({ where: { id } });
+
+  if (!product) {
+    throw new AppError({ statusCode: 404, message: "Product not found" });
+  }
+
+  await db.product.delete({ where: { id } });
 };
