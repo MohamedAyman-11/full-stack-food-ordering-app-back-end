@@ -6,6 +6,8 @@ import db from "../lib/prisma";
 import slugify from "slugify";
 import { type ProductSchemaType } from "../validations/index";
 import { deleteImage } from "../utils/deleteImage";
+import { Image } from "../interfaces";
+import { JsonNull } from "@prisma/client/runtime/client";
 
 type Size = {
   id: string;
@@ -178,6 +180,133 @@ export const getProductService = async (id: string) => {
 export const getProductsService = async () => {
   const products = await db.product.findMany();
   return products;
+};
+
+interface UpdateProduct {
+  buffer?: Buffer;
+  data: ProductSchemaType;
+  id: string;
+}
+
+export const updateProductService = async ({
+  id,
+  buffer,
+  data,
+}: UpdateProduct) => {
+  console.log(data);
+
+  const product = await db.product.findUnique({ where: { id } });
+
+  if (!product) {
+    throw new AppError({ statusCode: 404, message: "Product not found" });
+  }
+
+  if (data.sizes) {
+    const allowedExtras = await db.categorySize.findMany({
+      where: {
+        categoryId: data.category,
+      },
+    });
+
+    const allowedExtrasIds = new Set(allowedExtras.map((el) => el.sizeId));
+    const invalidSizes = data.sizes.find(
+      (size) => !allowedExtrasIds.has(size.id),
+    );
+
+    if (invalidSizes) {
+      throw new AppError({
+        statusCode: 400,
+        message: "One or more sizes are not available for this category",
+      });
+    }
+  }
+
+  if (data.extras) {
+    const allowedExtras = await db.categoryExtra.findMany({
+      where: {
+        categoryId: data.category,
+      },
+    });
+
+    const allowedExtrasIds = new Set(allowedExtras.map((el) => el.extraId));
+    const invalidExtras = data.extras.find(
+      (size) => !allowedExtrasIds.has(size.id),
+    );
+
+    if (invalidExtras) {
+      throw new AppError({
+        statusCode: 400,
+        message: "One or more extras are not available for this category",
+      });
+    }
+  }
+
+  type ProductImage = {
+    url: string;
+    public_id: string;
+  };
+
+  let image: ProductImage | undefined;
+
+  try {
+    if (buffer) {
+      const { url, public_id } = await uploadImage(buffer, "Products");
+      image = { url, public_id };
+    }
+
+    const updatedProduct = await db.product.update({
+      where: { id },
+      data: {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        discount: data.discount,
+        categoryId: data.category,
+        isAvailable: data.isAvailable,
+        image: image ? image : product.image ? product.image : JsonNull,
+        slug: slugify(data.name, { lower: true, trim: true }),
+        productSizes: data.sizes
+          ? {
+              deleteMany: {},
+              create: data.sizes.map((size) => ({
+                size: {
+                  connect: {
+                    id: size.id,
+                  },
+                },
+                price: size.price,
+              })),
+            }
+          : undefined,
+        productExtras: data.extras
+          ? {
+              deleteMany: {},
+              create: data.extras.map((extra) => ({
+                extra: {
+                  connect: {
+                    id: extra.id,
+                  },
+                },
+                price: extra.price,
+              })),
+            }
+          : undefined,
+      },
+    });
+
+    const oldImage = product.image as Image | null;
+
+    if (oldImage?.public_id && buffer) {
+      await deleteImage(oldImage.public_id);
+    }
+    console.log(updatedProduct);
+
+    return updatedProduct;
+  } catch (error) {
+    if (image?.public_id) {
+      await deleteImage(image.public_id);
+    }
+  }
 };
 
 export const deleteProductService = async (id: string) => {

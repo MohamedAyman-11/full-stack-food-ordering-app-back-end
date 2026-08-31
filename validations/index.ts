@@ -224,4 +224,11 @@ export const ProductSchema = z.object({
   }, z.array(productExtraSchema).min(1, "At least one extra is required").optional()),
   isAvailable: z.preprocess((value) => value === "true", z.boolean()),
 });
+
 export type ProductSchemaType = z.infer<typeof ProductSchema>;
+
+export const productQuerySchema = z.object({
+  category: z.string().optional(),
+});
+
+export type ProductQuerySchemaType = z.infer<typeof productQuerySchema>;

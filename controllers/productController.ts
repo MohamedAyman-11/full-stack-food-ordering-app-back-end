@@ -38,6 +38,22 @@ export const createProduct = async (req: Request, res: Response) => {
   });
 };
 
+export const updateProduct = async (req: Request, res: Response) => {
+  const product = await productService.updateProductService({
+    data: req.body,
+    id: req.params.id as string,
+    buffer: req.file?.buffer,
+  });
+  console.log(product);
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      product,
+    },
+  });
+};
+
 export const deleteProduct = async (req: Request, res: Response) => {
   await productService.deleteProductService(req.params.id as string);
   res.status(204).json({ status: "success", data: {} });

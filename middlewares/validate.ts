@@ -31,3 +31,18 @@ export const validate = (schema: z.ZodType) => {
     next();
   };
 };
+
+export const validateQuery = (schema: z.ZodType) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req.query);
+    if (!result.success) {
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid query parameters",
+        errors: z.flattenError(result.error).fieldErrors,
+      });
+    }
+    req.query = { ...result.data! };
+    next();
+  };
+};

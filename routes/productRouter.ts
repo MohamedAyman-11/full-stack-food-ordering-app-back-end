@@ -4,6 +4,7 @@ import {
   deleteProduct,
   getAllProducts,
   getProduct,
+  updateProduct,
 } from "../controllers/productController";
 import upload from "../middlewares/upload";
 import { validate } from "../middlewares/validate";
@@ -22,6 +23,15 @@ router
     createProduct,
   );
 router.route("/:id").get(getProduct);
-router.route("/:id").delete(protect, restrictTo("admin"), deleteProduct);
+router
+  .route("/:id")
+  .delete(protect, restrictTo("admin"), deleteProduct)
+  .patch(
+    protect,
+    restrictTo("admin"),
+    upload.single("product_image"),
+    validate(ProductSchema),
+    updateProduct,
+  );
 
 export default router;

@@ -10,8 +10,12 @@ import {
 } from "../controllers/categoriesController";
 import upload from "../middlewares/upload";
 import { protect, restrictTo } from "../middlewares/authMiddlewares";
-import { validate } from "../middlewares/validate";
-import { createCategorySchema, updateCategorySchema } from "../validations";
+import { validate, validateQuery } from "../middlewares/validate";
+import {
+  createCategorySchema,
+  productQuerySchema,
+  updateCategorySchema,
+} from "../validations";
 
 const router = express.Router();
 

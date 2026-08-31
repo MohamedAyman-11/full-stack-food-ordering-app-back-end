@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import * as categoryServices from "../services/category.service";
+import { productQuerySchema } from "../validations";
 
 export const getCategories = async (req: Request, res: Response) => {
   const { categories, count } = await categoryServices.getCategoriesService();
@@ -17,8 +18,9 @@ export const getCategoriesWithProducts = async (
   req: Request,
   res: Response,
 ) => {
+  const query = productQuerySchema.parse(req.query);
   const { categories, count } =
-    await categoryServices.getCategoriesWithProductsService();
+    await categoryServices.getCategoriesWithProductsService(query);
 
   res.status(200).json({
     status: "success",
