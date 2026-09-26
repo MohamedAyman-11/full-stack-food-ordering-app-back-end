@@ -3,9 +3,10 @@ import {
   createProduct,
   deleteProduct,
   getAllProducts,
+  getBestSeller,
   getProduct,
   updateProduct,
-} from "../controllers/productController";
+} from "../controllers/product.controller";
 import upload from "../middlewares/upload";
 import { validate } from "../middlewares/validate";
 import { ProductSchema } from "../validations";
@@ -14,7 +15,7 @@ const router = express.Router();
 
 router
   .route("/")
-  .get(protect, restrictTo("admin"), getAllProducts)
+  .get(getAllProducts)
   .post(
     protect,
     restrictTo("admin"),
@@ -22,6 +23,8 @@ router
     validate(ProductSchema),
     createProduct,
   );
+
+router.get("/best-seller", getBestSeller);
 router.route("/:id").get(getProduct);
 router
   .route("/:id")

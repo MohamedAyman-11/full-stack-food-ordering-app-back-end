@@ -4,7 +4,7 @@ import {
   getSizes,
   deleteSize,
   updateSize,
-} from "../controllers/sizeController";
+} from "../controllers/size.controller";
 import { protect, restrictTo } from "../middlewares/authMiddlewares";
 import { validate } from "../middlewares/validate";
 import { SizeSchema } from "../validations";

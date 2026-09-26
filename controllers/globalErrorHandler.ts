@@ -37,12 +37,14 @@ const handleJsonWebTokenError = () => {
     message: "Invalid token. Please log in again!",
   });
 };
+
 const handleJsonWebTokenExpired = () => {
   return new AppError({
     statusCode: 401,
     message: "Your token has expired! Please log in again!",
   });
 };
+
 const handleDuplicationError = (error: PrismaClientKnownRequestError) => {
   console.dir(error.meta, { depth: null });
   const message =
@@ -73,9 +75,9 @@ export const globalErrorHandler = (
       }
     }
     // Token Verification Error
-    if (error.name === "JsonWebTokenError") handleJsonWebTokenError();
+    if (error.name === "JsonWebTokenError") error = handleJsonWebTokenError();
     // Token Expired Error
-    if (error.name === "TokenExpiredError") handleJsonWebTokenExpired();
+    if (error.name === "TokenExpiredError") error = handleJsonWebTokenExpired();
     handleProductionError(error, res);
   }
 };

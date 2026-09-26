@@ -1,15 +1,8 @@
 import db from "../lib/prisma";
-import { Category, Prisma } from "../generated/prisma/client";
-import { NextFunction, Request } from "express";
 import uploadImage from "../utils/uploadImage";
-import {
-  CategoryUpdateInput,
-  CategoryWhereInput,
-  ProductWhereInput,
-} from "../generated/prisma/models";
+import { CategoryUpdateInput } from "../generated/prisma/models";
 import { deleteImage } from "../utils/deleteImage";
 import { AppError } from "../utils/appError";
-import { JsonValue } from "@prisma/client/runtime/client";
 import { ProductQuerySchemaType } from "../validations";
 
 type CategoryImage = {
@@ -35,17 +28,7 @@ export const getCategoriesService = async () => {
 export const getCategoriesWithProductsService = async (
   query: ProductQuerySchemaType,
 ) => {
-  const where: CategoryWhereInput = {};
-
-  if (query.category && query.category !== "all") {
-    where.name = {
-      equals: query.category,
-      mode: "insensitive",
-    };
-  }
-
   const categories = await db.category.findMany({
-    where,
     include: {
       products: {
         where: {

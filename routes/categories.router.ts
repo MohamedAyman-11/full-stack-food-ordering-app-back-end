@@ -7,15 +7,11 @@ import {
   getCategory,
   getCategoryOptions,
   updateCategory,
-} from "../controllers/categoriesController";
+} from "../controllers/categories.controller";
 import upload from "../middlewares/upload";
 import { protect, restrictTo } from "../middlewares/authMiddlewares";
-import { validate, validateQuery } from "../middlewares/validate";
-import {
-  createCategorySchema,
-  productQuerySchema,
-  updateCategorySchema,
-} from "../validations";
+import { validate } from "../middlewares/validate";
+import { createCategorySchema, updateCategorySchema } from "../validations";
 
 const router = express.Router();
 

@@ -1,11 +1,10 @@
-import { User } from "../../generated/prisma/client";
-import { ProductQuerySchemaType } from "../../validations";
+import { DeliveryBoy, User } from "../../generated/prisma/client";
 
 declare global {
   namespace Express {
     interface Request {
       user?: User;
-      validatedQuery?: ProductQuerySchemaType;
+      deliveryBoy?: DeliveryBoy;
     }
   }
 }

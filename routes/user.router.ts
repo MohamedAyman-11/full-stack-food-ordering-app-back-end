@@ -2,7 +2,7 @@ import express from "express";
 import { validate } from "../middlewares/validate";
 import { changePasswordSchema, updateProfileSchema } from "../validations";
 import { protect } from "../middlewares/authMiddlewares";
-import { updatePassword, updateProfile } from "../controllers/userController";
+import { updatePassword, updateProfile } from "../controllers/user.controller";
 import upload from "../middlewares/upload";
 const router = express.Router();
 router.patch(

@@ -9,6 +9,7 @@ export const createExtraService = async ({ name }: ExtraSchemaType) => {
 
 export const getExtrasService = async () => {
   const extras = await db.extra.findMany({ orderBy: { updatedAt: "desc" } });
+
   return extras;
 };
 

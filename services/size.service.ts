@@ -12,14 +12,14 @@ export const createSizeService = async ({ name }: SizeSchemaType) => {
 export const getSizesService = async () => {
   const sizes = await db.size.findMany({
     orderBy: {
-      updatedAt: "desc",
+      createdAt: "desc",
     },
   });
   return sizes;
 };
 
 export const deleteSizeService = async (size_id: string) => {
-  const size = await db.extra.findUnique({ where: { id: size_id } });
+  const size = await db.size.findUnique({ where: { id: size_id } });
 
   if (!size) {
     throw new AppError({ statusCode: 404, message: "Size not found" });
@@ -34,7 +34,7 @@ type UpdateSize = {
 };
 
 export const updateSizeService = async ({ data, size_id }: UpdateSize) => {
-  const size = await db.extra.findUnique({ where: { id: size_id } });
+  const size = await db.size.findUnique({ where: { id: size_id } });
 
   if (!size) {
     throw new AppError({ statusCode: 404, message: "Size not found" });

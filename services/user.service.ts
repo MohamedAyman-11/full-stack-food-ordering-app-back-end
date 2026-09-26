@@ -1,10 +1,12 @@
-import { Request } from "express";
 import { AppError } from "../utils/appError";
 import db from "../lib/prisma";
 import uploadImage from "../utils/uploadImage";
 import { deleteImage } from "../utils/deleteImage";
 import { compareHash, generateHash } from "../utils/handlers";
-import { ChangePasswordType, UpdateProfileType } from "../validations";
+import {
+  ChangePasswordSchemaType,
+  UpdateProfileSchemaType,
+} from "../validations";
 import { Prisma, User } from "../generated/prisma/client";
 
 type UserImage = {
@@ -13,7 +15,7 @@ type UserImage = {
 };
 
 type UpdateProfile = {
-  data: UpdateProfileType;
+  data: UpdateProfileSchemaType;
   buffer?: Buffer;
   existingUser: User;
 };
@@ -55,7 +57,7 @@ export const updateProfileService = async ({
 };
 
 type ChangePassword = {
-  data: ChangePasswordType;
+  data: ChangePasswordSchemaType;
   currentUser: User;
 };
 

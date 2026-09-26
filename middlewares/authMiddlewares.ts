@@ -59,3 +59,44 @@ export const restrictTo = (...roles: string[]) => {
     next();
   };
 };
+
+export const protectDelivery = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const authHeaders = req.headers.authorization;
+
+  let token = authHeaders?.startsWith("Bearer ")
+    ? authHeaders.split(" ")[2]
+    : req.cookies.deliveryAccessToken;
+
+  if (!token)
+    return next(
+      new AppError({
+        statusCode: 401,
+        message: "You are not logged in! Please log in to get access.",
+      }),
+    );
+
+  const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET!) as {
+    deliveryId: string;
+  };
+
+  const freshDelivery = await db.deliveryBoy.findUnique({
+    where: { id: decoded.deliveryId },
+  });
+
+  if (!freshDelivery) {
+    return next(
+      new AppError({
+        statusCode: 401,
+        message:
+          "The delivery boy belonging to this token does no longer exist!",
+      }),
+    );
+  }
+
+  req.deliveryBoy = freshDelivery;
+  next();
+};

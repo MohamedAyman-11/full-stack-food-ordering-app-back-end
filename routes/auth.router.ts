@@ -1,13 +1,13 @@
 import express from "express";
 import {
-  signup,
+  register,
   login,
   getCurrentUser,
   logout,
-  googleAuth,
   forgotPassword,
   resetPassword,
-} from "../controllers/authController";
+  googleAuth,
+} from "../controllers/auth.controller";
 import { protect } from "../middlewares/authMiddlewares";
 import {
   forgotSchema,
@@ -16,9 +16,11 @@ import {
   resetSchema,
 } from "../validations";
 import { authValidate } from "../middlewares/validate";
+
 const router = express.Router();
+
+router.post("/register", authValidate(registerSchema), register);
 router.post("/login", authValidate(loginSchema), login);
-router.post("/signup", authValidate(registerSchema), signup);
 router.post("/google", googleAuth);
 router.post("/forgot-password", authValidate(forgotSchema), forgotPassword);
 router.post("/reset-password/:token", authValidate(resetSchema), resetPassword);

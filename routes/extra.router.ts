@@ -4,7 +4,7 @@ import {
   deleteExtra,
   getExtras,
   updateExtra,
-} from "../controllers/extraController";
+} from "../controllers/extra.controller";
 import { protect, restrictTo } from "../middlewares/authMiddlewares";
 import { validate } from "../middlewares/validate";
 import { extraSchema } from "../validations";

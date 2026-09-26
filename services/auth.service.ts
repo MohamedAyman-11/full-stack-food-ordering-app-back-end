@@ -1,8 +1,7 @@
-import { Request, Response } from "express";
 import crypto from "crypto";
 import db from "../lib/prisma";
 import { AppError } from "../utils/appError";
-import { compareHash, generateTokens, generateHash } from "../utils/handlers";
+import { compareHash, generateHash } from "../utils/handlers";
 import { OAuth2Client } from "google-auth-library";
 import {
   ForgotSchemaType,
@@ -11,9 +10,10 @@ import {
   RegisterSchemaType,
   ResetSchemaType,
 } from "../validations";
+import jwt from "jsonwebtoken";
 
 // Register
-export const signupService = async (data: RegisterSchemaType) => {
+export const registerService = async (data: RegisterSchemaType) => {
   const { firstName, lastName, email, password } = data;
 
   const existingUser = await db.user.findUnique({ where: { email } });
@@ -45,10 +45,16 @@ export const signupService = async (data: RegisterSchemaType) => {
 };
 
 // Login
-export const loginService = async (data: LoginSchemaType) => {
+type Login = {
+  data: LoginSchemaType;
+  rememberMe: boolean;
+};
+
+export const loginService = async ({ data, rememberMe }: Login) => {
   const { email, password } = data;
 
   const existingUser = await db.user.findUnique({ where: { email } });
+
   if (!existingUser) {
     throw new AppError({
       statusCode: 401,
@@ -64,6 +70,7 @@ export const loginService = async (data: LoginSchemaType) => {
   }
 
   const isValidPassword = await compareHash(password, existingUser?.password!);
+
   if (!isValidPassword) {
     throw new AppError({
       statusCode: 401,
@@ -71,7 +78,15 @@ export const loginService = async (data: LoginSchemaType) => {
     });
   }
 
-  return existingUser;
+  const accessToken = jwt.sign(
+    { userId: existingUser.id },
+    process.env.ACCESS_TOKEN_SECRET!,
+    {
+      expiresIn: rememberMe ? "7d" : "1d",
+    },
+  );
+
+  return { user: existingUser, accessToken };
 };
 
 // Google Auth
@@ -79,6 +94,7 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 export const googleAuthService = async (data: GoogleAuthSchemaType) => {
   const { credential } = data;
 
+  // Check if token valid
   const ticket = await client.verifyIdToken({
     idToken: credential,
     audience: process.env.GOOGLE_CLIENT_ID,
@@ -106,12 +122,20 @@ export const googleAuthService = async (data: GoogleAuthSchemaType) => {
 
   if (existingUser) {
     if (existingUser.provider === "GOOGLE" && existingUser.googleId) {
-      return existingUser;
+      const accessToken = jwt.sign(
+        { userId: existingUser.id },
+        process.env.ACCESS_TOKEN_SECRET!,
+        {
+          expiresIn: "7d",
+        },
+      );
+
+      return { user: existingUser, accessToken };
     } else {
       throw new AppError({
         statusCode: 400,
         message:
-          "This email is already registered. Please sign in with your credentials.",
+          "This email is already registered. Please sign in with your email and password.",
       });
     }
   }
@@ -127,7 +151,15 @@ export const googleAuthService = async (data: GoogleAuthSchemaType) => {
     },
   });
 
-  return user;
+  const accessToken = jwt.sign(
+    { userId: user.id },
+    process.env.ACCESS_TOKEN_SECRET!,
+    {
+      expiresIn: "7d",
+    },
+  );
+
+  return { user, accessToken };
 };
 
 // Forgot password
@@ -182,6 +214,7 @@ export const resetPasswordService = async (data: ResetSchema) => {
   }
 
   const hashedNewPassword = await generateHash(newPassword);
+
   const updatePassword = db.user.update({
     where: { id: validToken.userId },
     data: {
@@ -196,19 +229,4 @@ export const resetPasswordService = async (data: ResetSchema) => {
   await db.$transaction([updatePassword, deleteToken]);
 
   return await updatePassword;
-};
-
-// Logout
-export const logoutService = async (token: string) => {
-  const refreshToken = token;
-  if (!refreshToken) {
-    throw new AppError({ statusCode: 400, message: "Token is required" });
-  }
-  const hashedRefreshToken = crypto
-    .createHash("sha256")
-    .update(refreshToken)
-    .digest("hex");
-  await db.refreshToken.delete({
-    where: { tokenHash: hashedRefreshToken },
-  });
 };

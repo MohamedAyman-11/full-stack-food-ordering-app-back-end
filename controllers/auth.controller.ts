@@ -5,79 +5,42 @@ import { AppError } from "../utils/appError";
 import crypto from "crypto";
 import Email from "../utils/email";
 import resetPasswordEmail from "../templates/resetPassword";
-import {
-  generateAccessToken,
-  generateTokens,
-  sendToken,
-} from "../utils/handlers";
 
-/*
-- Register          OK
-- Login             OK
-- Get Me            OK
-- Forgot Password   OK
-- Reset Password    OK
-- Logout            OK
-- Google Auth       OK
-*/
-
-export const signup = async (req: Request, res: Response) => {
-  const user = await authService.signupService(req.body);
-
-  const token = generateAccessToken(user.id);
+export const register = async (req: Request, res: Response) => {
+  const user = await authService.registerService(req.body);
 
   res.status(201).json({
     status: "success",
-    data: { user, token },
+    data: { user },
   });
 };
 
 export const login = async (req: Request, res: Response) => {
-  const user = await authService.loginService(req.body);
-
-  const { accessToken, refreshToken } = await generateTokens({
-    userId: user.id,
+  const { remember } = req.body;
+  const { user, accessToken } = await authService.loginService({
+    data: req.body,
+    rememberMe: remember,
   });
 
-  sendToken({
-    token: refreshToken,
-    tokenName: "refreshToken",
-    ...(req.body.remember && { maxAge: 30 * 24 * 60 * 60 * 1000 }),
-    res,
-  });
-
-  sendToken({
-    token: accessToken,
-    tokenName: "accessToken",
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-    res,
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    ...(remember && { maxAge: 7 * 24 * 60 * 60 * 1000 }),
   });
 
   res.status(200).json({
     status: "success",
-    data: { user: { ...user, password: undefined }, token: refreshToken },
+    data: { user: { ...user, password: undefined }, token: accessToken },
   });
 };
 
 export const googleAuth = async (req: Request, res: Response) => {
-  const user = await authService.googleAuthService(req.body);
+  const { user, accessToken } = await authService.googleAuthService(req.body);
 
-  const { accessToken, refreshToken } = await generateTokens({
-    userId: user.id,
-  });
-
-  sendToken({
-    token: accessToken,
-    res,
-    tokenName: "accessToken",
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-  });
-
-  sendToken({
-    token: refreshToken,
-    res,
-    tokenName: "refreshToken",
-    maxAge: 30 * 24 * 60 * 60 * 1000,
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    ...(req.body.remember && { maxAge: 7 * 24 * 60 * 60 * 1000 }),
   });
 
   res.status(200).json({
@@ -114,6 +77,7 @@ export const forgotPassword = async (
       name: `${user.firstName} ${user.lastName}`,
       resetUrl,
     });
+
     await email.sendEmail({ template, subject: "Reset your password" });
 
     return res.status(200).json({
@@ -143,6 +107,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     ...req.body,
     token: req.params.token,
   });
+
   res.status(200).json({
     status: "success",
     data: { user: { ...user, password: undefined } },
@@ -150,10 +115,7 @@ export const resetPassword = async (req: Request, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
-  const refreshToken = req.cookies.refreshToken;
-  await authService.logoutService(refreshToken);
   res.clearCookie("accessToken");
-  res.clearCookie("refreshToken");
   res.status(200).json({
     status: "success",
     message: "Logout successful",

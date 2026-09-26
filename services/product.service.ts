@@ -1,13 +1,18 @@
-import { NextFunction, Request, Response } from "express";
 import { AppError } from "../utils/appError";
 import uploadImage from "../utils/uploadImage";
-import { Product } from "../generated/prisma/client";
 import db from "../lib/prisma";
 import slugify from "slugify";
-import { type ProductSchemaType } from "../validations/index";
+import {
+  ProductQuerySchemaType,
+  type ProductSchemaType,
+} from "../validations/index";
 import { deleteImage } from "../utils/deleteImage";
 import { Image } from "../interfaces";
 import { JsonNull } from "@prisma/client/runtime/client";
+import {
+  ProductOrderByWithRelationInput,
+  ProductWhereInput,
+} from "../generated/prisma/models";
 
 type Size = {
   id: string;
@@ -149,6 +154,9 @@ export const getProductService = async (id: string) => {
     where: { id },
     include: {
       productSizes: {
+        orderBy: {
+          price: "asc",
+        },
         select: {
           price: true,
           size: {
@@ -160,6 +168,9 @@ export const getProductService = async (id: string) => {
         },
       },
       productExtras: {
+        orderBy: {
+          price: "asc",
+        },
         select: {
           price: true,
           extra: {
@@ -177,9 +188,95 @@ export const getProductService = async (id: string) => {
   return product;
 };
 
-export const getProductsService = async () => {
-  const products = await db.product.findMany();
-  return products;
+type GetProducts = {
+  query: ProductQuerySchemaType;
+};
+
+export const getProductsService = async ({ query }: GetProducts) => {
+  const where: ProductWhereInput = {
+    isAvailable: true,
+  };
+
+  // FILTER
+  if (query.categories && query.categories.toLowerCase() !== "all") {
+    const categories = query.categories.split(", ").map((c) => c.trim());
+    where.category = {
+      name: {
+        in: categories,
+        mode: "insensitive",
+      },
+    };
+  }
+
+  if (query.search) {
+    where.name = {
+      contains: query.search,
+      mode: "insensitive",
+    };
+  }
+
+  if (query.minPrice || query.maxPrice) {
+    where.price = {
+      gte: query.minPrice,
+      lte: query.maxPrice,
+    };
+  }
+
+  // SORT
+
+  const sortMap: Record<string, ProductOrderByWithRelationInput> = {
+    recent_desc: {
+      createdAt: "desc",
+    },
+    price_asc: {
+      price: "asc",
+    },
+    price_desc: {
+      price: "desc",
+    },
+    discount_desc: {
+      discount: "desc",
+    },
+  };
+
+  const sort = query.sort
+    ? sortMap[query.sort as keyof typeof sortMap]
+    : sortMap["recent_desc"];
+
+  // PAGINATION
+  const page = query.page || 1;
+  const limit = query.limit || 6;
+  const skip = (page - 1) * limit;
+
+  const [products, count] = await Promise.all([
+    db.product.findMany({
+      where: where,
+      orderBy: sort,
+      skip,
+      take: limit,
+      include: {
+        productExtras: {
+          include: { extra: true },
+          orderBy: {
+            price: "asc",
+          },
+        },
+        productSizes: {
+          include: {
+            size: true,
+          },
+          orderBy: {
+            price: "asc",
+          },
+        },
+      },
+    }),
+    db.product.count({
+      where: where,
+    }),
+  ]);
+
+  return { products, count };
 };
 
 interface UpdateProduct {
@@ -317,4 +414,45 @@ export const deleteProductService = async (id: string) => {
   }
 
   await db.product.delete({ where: { id } });
+};
+
+type BestSellerProducts = {
+  productId: string;
+  soldQuantity: bigint;
+};
+
+export const getBestSellerService = async () => {
+  const bestSellersProducts = await db.$queryRaw<BestSellerProducts[]>`
+    select oi."productId",sum(oi.quantity) as "soldQuantity" from "Order" o inner join "OrderItem" oi on o.id = oi."orderId"
+    where o."orderStatus"='DELIVERED' and o."deliveredAt" >= now()- interval '30 days'
+    group by oi."productId"
+  order by "soldQuantity" desc
+  limit 5
+  `;
+
+  console.log(bestSellersProducts);
+
+  const productIds = bestSellersProducts.map((product) => product.productId);
+  console.log(productIds);
+
+  const products = await db.product.findMany({
+    where: {
+      id: {
+        in: productIds,
+      },
+    },
+    include: {
+      productExtras: {
+        include: {
+          extra: true,
+        },
+      },
+      productSizes: {
+        include: {
+          size: true,
+        },
+      },
+    },
+  });
+  return products;
 };

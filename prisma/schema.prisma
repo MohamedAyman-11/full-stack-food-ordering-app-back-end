@@ -26,7 +26,6 @@ model User {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   ordersAsCustomer    Order[]              @relation("Ordering")
-  refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
 }
 
@@ -38,15 +37,6 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model RefreshToken {
-  id        String   @id @default(uuid())
-  tokenHash String   @unique
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Product {
@@ -74,6 +64,7 @@ model Size {
   updatedAt    DateTime       @updatedAt
   categorySize CategorySize[]
   productSize  ProductSize[]
+  orderItems   OrderItem[]
 }
 
 model ProductSize {
@@ -89,12 +80,13 @@ model ProductSize {
 }
 
 model Extra {
-  id             String          @id @default(uuid())
-  name           String
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  categoryExtras CategoryExtra[]
-  productExtras  ProductExtra[]
+  id              String           @id @default(uuid())
+  name            String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  categoryExtras  CategoryExtra[]
+  productExtras   ProductExtra[]
+  orderItemExtras OrderItemExtra[]
 }
 
 model ProductExtra {
@@ -139,55 +131,136 @@ model CategoryExtra {
 }
 
 model Order {
-  id          String      @id @default(uuid())
-  totalPrice  Decimal
-  discount    Decimal?
-  taxes       Decimal?
-  subtotal    Decimal
-  deliveryFee Decimal?
-  city        String?
-  country     String?
-  street      String?
-  postalCode  Int?
-  userId      String
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  user        User        @relation("Ordering", fields: [userId], references: [id])
-  orderItems  OrderItem[]
-  payment     Payment?
+  id               String        @id @default(uuid())
+  totalPrice       Decimal
+  discount         Decimal?
+  customerPhone    String
+  taxes            Decimal?
+  subtotal         Decimal
+  deliveryFee      Decimal?
+  city             String
+  country          String
+  street           String
+  postalCode       String
+  userId           String
+  code             String
+  placedAt         DateTime?
+  assignedAt       DateTime?
+  confirmedAt      DateTime?
+  packedAt         DateTime?
+  outForDeliveryAt DateTime?
+  deliveredAt      DateTime?
+  deliveryOtp      Int?
+  orderStatus      OrderStatus   @default(PLACED)
+  paymentMethod    PaymentMethod
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  user             User          @relation("Ordering", fields: [userId], references: [id])
+  orderItems       OrderItem[]
+  payment          Payment?
+  deliveryBoy      DeliveryBoy?  @relation(fields: [deliveryBoyId], references: [id])
+  deliveryBoyId    String?
 }
 
 model OrderItem {
-  orderId     String
-  productId   String
-  quantity    Int
-  totalPrice  Decimal
-  unitPrice   Decimal
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  orderItemId String   @id @default(uuid())
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product  @relation(fields: [productId], references: [id])
+  orderId         String
+  productId       String
+  sizeId          String
+  quantity        Int
+  discount        Decimal
+  totalPrice      Decimal
+  unitPrice       Decimal
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  orderItemId     String           @id @default(uuid())
+  order           Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product          @relation(fields: [productId], references: [id])
+  size            Size             @relation(fields: [sizeId], references: [id])
+  orderItemExtras OrderItemExtra[]
+}
+
+model OrderItemExtra {
+  extraId     String
+  orderItemId String
+  price       Decimal
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  extra       Extra     @relation(fields: [extraId], references: [id], onDelete: Cascade)
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [orderItemId], onDelete: Cascade)
+
+  @@id([extraId, orderItemId])
+}
+
+model DeliveryBoy {
+  id        String            @id @default(uuid())
+  phone     String            @unique
+  email     String            @unique
+  name      String
+  password  String
+  status    DeliveryBoyStatus @default(ACTIVE)
+  vehicle   Delivery_Vehicle  @default(BIKE)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  orders    Order[]
 }
 
 model Payment {
-  id        String        @id @default(uuid())
-  amount    Decimal
-  status    PaymentStatus @default(NOT_PAID)
-  orderId   String        @unique
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  order     Order         @relation(fields: [orderId], references: [id])
+  id     String  @id @default(uuid())
+  amount Decimal
+
+  status PaymentStatus @default(UNPAID)
+
+  orderId String @unique
+
+  stripeSessionId       String? @unique
+  stripePaymentIntentId String? @unique
+
+  paidAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum OrderStatus {
+  PLACED
+  CONFIRMED
+  ASSIGNED
+  PACKED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  PENDING_PAYMENT
+}
+
+enum PaymentMethod {
+  CREDIT
+  ON_DELIVERY
 }
 
 enum Role {
   CUSTOMER
   ADMIN
+  DELIVERY
 }
 
-enum PaymentStatus {
-  PAID
-  NOT_PAID
+enum Delivery_Vehicle {
+  BIKE
+  SCOOTER
+  CAR
+}
+
+enum DeliveryBoyStatus {
+  ACTIVE
+  INACTIVE
 }
 
 enum AuthProvider {

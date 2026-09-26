@@ -1,6 +1,6 @@
-import { NextFunction, Request, Response } from "express";
-import db from "../lib/prisma";
+import { Request, Response } from "express";
 import * as productService from "../services/product.service";
+import { productQuerySchema } from "../validations";
 
 export const getProduct = async (req: Request, res: Response) => {
   const id = req.params.id;
@@ -13,16 +13,30 @@ export const getProduct = async (req: Request, res: Response) => {
   });
 };
 
-export const getAllProducts = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  const products = await productService.getProductsService();
-  res.status(200).json({
-    status: "success",
-    data: { products },
-  });
+export const getAllProducts = async (req: Request, res: Response) => {
+  try {
+    const query = productQuerySchema.parse(req.query);
+    console.log(query);
+
+    const { products, count } = await productService.getProductsService({
+      query,
+    });
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        products,
+        pagination: {
+          total: count,
+          totalPages: Math.ceil(count / (query.limit || 6)),
+          page: query.page || 1,
+          limit: query.limit || 6,
+        },
+      },
+    });
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 export const createProduct = async (req: Request, res: Response) => {
@@ -57,4 +71,14 @@ export const updateProduct = async (req: Request, res: Response) => {
 export const deleteProduct = async (req: Request, res: Response) => {
   await productService.deleteProductService(req.params.id as string);
   res.status(204).json({ status: "success", data: {} });
+};
+
+export const getBestSeller = async (req: Request, res: Response) => {
+  const products = await productService.getBestSellerService();
+  res.status(200).json({
+    status: "success",
+    data: {
+      products,
+    },
+  });
 };
