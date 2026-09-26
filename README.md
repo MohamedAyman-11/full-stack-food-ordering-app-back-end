@@ -76,16 +76,6 @@ HTTP request
 	-> PostgreSQL
 ```
 
-External integrations are kept in focused modules for Stripe, Cloudinary, Google authentication, and email delivery. Prisma migrations in `prisma/migrations` define the database evolution history.
-
-## Installation and Setup
-
-### Prerequisites
-
-- Node.js and npm
-- PostgreSQL database
-- Credentials for any integrations used locally: Stripe, Cloudinary, Google OAuth, and email delivery
-
 ## Contact
 
 For project questions or issues, open an issue in the repository.
