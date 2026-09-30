@@ -164,7 +164,7 @@ export const createOrderService = async ({ data, userId }: CreateOrder) => {
       }) ?? [];
 
     const basePrice = getPriceAfterDiscount(
-      Number(size.price),
+      Number(product.price),
       Number(product.discount ?? 0),
     );
 
@@ -172,6 +172,7 @@ export const createOrderService = async ({ data, userId }: CreateOrder) => {
       basePrice,
       extras: extras,
       quantity: item.quantity,
+      sizePrice: +size.price,
     });
 
     return {

@@ -127,10 +127,7 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
     orderId,
     userId,
   });
-  console.log("CREATED CHECKOUT SESSION:", {
-    id: session.id,
-    metadata: session.metadata,
-  });
+
   res.status(200).json({
     status: "success",
     checkoutUrl: session.url,

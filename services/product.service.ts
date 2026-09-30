@@ -14,15 +14,6 @@ import {
   ProductWhereInput,
 } from "../generated/prisma/models";
 
-type Size = {
-  id: string;
-  price: number;
-};
-
-type Extra = {
-  id: string;
-  price: number;
-};
 interface CreateProduct {
   buffer?: Buffer;
   data: ProductSchemaType;
@@ -34,53 +25,11 @@ export const createProductService = async ({ buffer, data }: CreateProduct) => {
     discount,
     description,
     name,
-    price,
     extras,
     sizes,
     isAvailable,
+    price,
   } = data;
-
-  const [allowedSizes, allowedExtras] = await Promise.all([
-    db.categorySize.findMany({
-      where: {
-        categoryId: category,
-      },
-      select: { sizeId: true },
-    }),
-    db.categoryExtra.findMany({
-      where: {
-        categoryId: category,
-      },
-      select: {
-        extraId: true,
-      },
-    }),
-  ]);
-
-  const allowedSizeIds = new Set(allowedSizes.map((item) => item.sizeId));
-  const allowedExtraIds = new Set(allowedExtras.map((item) => item.extraId));
-
-  if (sizes) {
-    const invalidSize = sizes.find((item) => !allowedSizeIds.has(item.id));
-
-    if (invalidSize) {
-      throw new AppError({
-        statusCode: 400,
-        message: "One or more sizes are not available for this category",
-      });
-    }
-  }
-
-  if (extras) {
-    const invalidExtra = extras.find((item) => !allowedExtraIds.has(item.id));
-
-    if (invalidExtra) {
-      throw new AppError({
-        statusCode: 400,
-        message: "One or more extras are not available for this category",
-      });
-    }
-  }
 
   if (!buffer) {
     throw new AppError({
@@ -92,6 +41,7 @@ export const createProductService = async ({ buffer, data }: CreateProduct) => {
   let image;
   try {
     const { url, public_id } = await uploadImage(buffer, "Products");
+
     image = { url, public_id };
 
     const product = await db.$transaction(async (tx) => {
@@ -143,9 +93,18 @@ export const createProductService = async ({ buffer, data }: CreateProduct) => {
 
     return product;
   } catch (error) {
+    console.error("Create product error:", error);
+
+    // Cleanup Cloudinary image if DB operation failed
     if (image?.public_id) {
-      await deleteImage(image.public_id);
+      try {
+        await deleteImage(image.public_id);
+      } catch (cleanupError) {
+        console.error("Cloudinary cleanup failed:", cleanupError);
+      }
     }
+
+    throw error;
   }
 };
 
@@ -290,52 +249,10 @@ export const updateProductService = async ({
   buffer,
   data,
 }: UpdateProduct) => {
-  console.log(data);
-
   const product = await db.product.findUnique({ where: { id } });
 
   if (!product) {
     throw new AppError({ statusCode: 404, message: "Product not found" });
-  }
-
-  if (data.sizes) {
-    const allowedExtras = await db.categorySize.findMany({
-      where: {
-        categoryId: data.category,
-      },
-    });
-
-    const allowedExtrasIds = new Set(allowedExtras.map((el) => el.sizeId));
-    const invalidSizes = data.sizes.find(
-      (size) => !allowedExtrasIds.has(size.id),
-    );
-
-    if (invalidSizes) {
-      throw new AppError({
-        statusCode: 400,
-        message: "One or more sizes are not available for this category",
-      });
-    }
-  }
-
-  if (data.extras) {
-    const allowedExtras = await db.categoryExtra.findMany({
-      where: {
-        categoryId: data.category,
-      },
-    });
-
-    const allowedExtrasIds = new Set(allowedExtras.map((el) => el.extraId));
-    const invalidExtras = data.extras.find(
-      (size) => !allowedExtrasIds.has(size.id),
-    );
-
-    if (invalidExtras) {
-      throw new AppError({
-        statusCode: 400,
-        message: "One or more extras are not available for this category",
-      });
-    }
   }
 
   type ProductImage = {
@@ -384,7 +301,7 @@ export const updateProductService = async ({
                     id: extra.id,
                   },
                 },
-                price: extra.price,
+                price: extra.price ?? 0,
               })),
             }
           : undefined,
@@ -396,7 +313,6 @@ export const updateProductService = async ({
     if (oldImage?.public_id && buffer) {
       await deleteImage(oldImage.public_id);
     }
-    console.log(updatedProduct);
 
     return updatedProduct;
   } catch (error) {
@@ -430,10 +346,7 @@ export const getBestSellerService = async () => {
   limit 5
   `;
 
-  console.log(bestSellersProducts);
-
   const productIds = bestSellersProducts.map((product) => product.productId);
-  console.log(productIds);
 
   const products = await db.product.findMany({
     where: {

@@ -124,8 +124,6 @@ export const getMyOrdersService = async ({ id, query }: GetMyOrders) => {
     }),
     db.order.count({ where }),
   ]);
-  console.log("ID:", id);
-  console.log("ORDERS:", orders);
   return { orders, count };
 };
 
@@ -252,8 +250,6 @@ export const cancelOrderService = async ({
   orderId,
   deliveryBoyId,
 }: CancelOrder) => {
-  console.log(orderId);
-
   const order = await db.order.findUnique({
     where: { id: orderId },
   });

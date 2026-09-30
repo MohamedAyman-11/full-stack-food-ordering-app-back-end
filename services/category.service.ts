@@ -48,18 +48,6 @@ export const getCategoriesWithProductsService = async (
 export const getCategory = async ({ id }: GetCategory) => {
   const category = await db.category.findUnique({
     where: { id },
-    include: {
-      categoryExtras: {
-        include: {
-          extra: true,
-        },
-      },
-      categorySizes: {
-        include: {
-          size: true,
-        },
-      },
-    },
   });
   if (!category) {
     throw new AppError({ statusCode: 404, message: "Category not found" });
@@ -70,15 +58,11 @@ export const getCategory = async ({ id }: GetCategory) => {
 type CreateCategory = {
   name: string;
   buffer?: Buffer;
-  sizeIds: string[];
-  extraIds: string[];
 };
 
 export const createCategoryService = async ({
   name,
   buffer,
-  sizeIds,
-  extraIds,
 }: CreateCategory) => {
   if (!buffer) {
     throw new AppError({
@@ -95,53 +79,6 @@ export const createCategoryService = async ({
     data: {
       name,
       image,
-      categorySizes: {
-        ...(sizeIds && {
-          create: sizeIds.map((id) => ({
-            size: {
-              connect: {
-                id,
-              },
-            },
-          })),
-        }),
-      },
-
-      categoryExtras: {
-        ...(extraIds && {
-          create: extraIds.map((id) => ({
-            extra: {
-              connect: {
-                id,
-              },
-            },
-          })),
-        }),
-      },
-    },
-
-    include: {
-      categorySizes: {
-        include: {
-          size: {
-            select: {
-              name: true,
-              id: true,
-            },
-          },
-        },
-      },
-
-      categoryExtras: {
-        include: {
-          extra: {
-            select: {
-              name: true,
-              id: true,
-            },
-          },
-        },
-      },
     },
   });
 
@@ -152,15 +89,11 @@ type UpdateCategory = {
   id: string;
   data: CategoryUpdateInput;
   buffer?: Buffer;
-  sizeIds?: string[];
-  extraIds?: string[];
 };
 
 export const updateCategoryService = async ({
   id,
   data,
-  sizeIds,
-  extraIds,
   buffer,
 }: UpdateCategory) => {
   const category = await db.category.findUnique({ where: { id } });
@@ -169,8 +102,6 @@ export const updateCategoryService = async ({
   }
 
   const updateData: CategoryUpdateInput = {
-    categoryExtras: {},
-    categorySizes: {},
     name: data.name,
     image: category?.image!,
   };
@@ -178,40 +109,6 @@ export const updateCategoryService = async ({
   if (buffer) {
     const { url, public_id } = await uploadImage(buffer, "Categories");
     updateData.image = { url, public_id };
-  }
-
-  if (sizeIds !== undefined) {
-    updateData.categorySizes = {
-      deleteMany: {},
-      create: sizeIds.map((id) => ({
-        size: {
-          connect: {
-            id,
-          },
-        },
-      })),
-    };
-  } else {
-    updateData.categorySizes = {
-      deleteMany: {},
-    };
-  }
-
-  if (extraIds !== undefined) {
-    updateData.categoryExtras = {
-      deleteMany: {},
-      create: extraIds.map((id) => ({
-        extra: {
-          connect: {
-            id,
-          },
-        },
-      })),
-    };
-  } else {
-    updateData.categoryExtras = {
-      deleteMany: {},
-    };
   }
 
   const updatedCategory = await db.category.update({
@@ -240,38 +137,4 @@ export const deleteCategoryService = async (id: string) => {
   if (oldImage?.public_id) {
     await deleteImage(oldImage?.public_id);
   }
-};
-
-export const getCategoryOptionsService = async (id: string) => {
-  const category = await db.category.findUnique({ where: { id } });
-
-  if (!category) {
-    throw new AppError({ statusCode: 404, message: "Category not found" });
-  }
-
-  const sizes = await db.categorySize.findMany({
-    where: {
-      categoryId: id,
-    },
-    select: {
-      size: {
-        select: {
-          name: true,
-          id: true,
-        },
-      },
-    },
-  });
-  const extras = await db.categoryExtra.findMany({
-    where: { categoryId: id },
-    select: {
-      extra: {
-        select: {
-          name: true,
-          id: true,
-        },
-      },
-    },
-  });
-  return { sizes, extras };
 };

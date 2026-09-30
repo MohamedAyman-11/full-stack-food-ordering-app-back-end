@@ -13,16 +13,18 @@ type ItemPrices = {
   basePrice: number;
   extras?: { extraId: string; price: number }[];
   quantity: number;
+  sizePrice: number;
 };
 
 export const calculateItemSubtotal = ({
   basePrice,
   extras = [],
   quantity,
+  sizePrice,
 }: ItemPrices) => {
   const extrasTotalPrice = extras.reduce((prev, curr) => prev + curr.price, 0);
 
-  return Math.ceil((basePrice + extrasTotalPrice) * quantity);
+  return Math.ceil((basePrice + extrasTotalPrice + sizePrice) * quantity);
 };
 
 type OrderPrices = {

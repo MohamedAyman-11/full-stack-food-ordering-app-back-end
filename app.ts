@@ -23,11 +23,6 @@ app.use(
   }),
 );
 
-app.use((req, res, next) => {
-  console.log(req.method, req.originalUrl);
-  next();
-});
-
 app.set("query parser", "extended");
 app.use(`${API_PREFIX}/stripe`, stripeRouter);
 app.use(cookie_parser());

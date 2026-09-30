@@ -113,8 +113,6 @@ export const completeOrder = async (req: Request, res: Response) => {
 
 // CANCEL ORDER
 export const cancelOrder = async (req: Request, res: Response) => {
-  console.log(req.params.id);
-
   const order = deliveryService.cancelOrderService({
     deliveryBoyId: req.deliveryBoy!.id,
     orderId: req.params.id as string,

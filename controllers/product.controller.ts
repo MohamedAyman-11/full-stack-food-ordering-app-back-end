@@ -14,29 +14,24 @@ export const getProduct = async (req: Request, res: Response) => {
 };
 
 export const getAllProducts = async (req: Request, res: Response) => {
-  try {
-    const query = productQuerySchema.parse(req.query);
-    console.log(query);
+  const query = productQuerySchema.parse(req.query);
 
-    const { products, count } = await productService.getProductsService({
-      query,
-    });
+  const { products, count } = await productService.getProductsService({
+    query,
+  });
 
-    res.status(200).json({
-      status: "success",
-      data: {
-        products,
-        pagination: {
-          total: count,
-          totalPages: Math.ceil(count / (query.limit || 6)),
-          page: query.page || 1,
-          limit: query.limit || 6,
-        },
+  res.status(200).json({
+    status: "success",
+    data: {
+      products,
+      pagination: {
+        total: count,
+        totalPages: Math.ceil(count / (query.limit || 6)),
+        page: query.page || 1,
+        limit: query.limit || 6,
       },
-    });
-  } catch (error) {
-    console.log(error);
-  }
+    },
+  });
 };
 
 export const createProduct = async (req: Request, res: Response) => {
@@ -58,7 +53,6 @@ export const updateProduct = async (req: Request, res: Response) => {
     id: req.params.id as string,
     buffer: req.file?.buffer,
   });
-  console.log(product);
 
   res.status(200).json({
     status: "success",

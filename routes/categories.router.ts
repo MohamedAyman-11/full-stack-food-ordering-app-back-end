@@ -5,7 +5,6 @@ import {
   getCategories,
   getCategoriesWithProducts,
   getCategory,
-  getCategoryOptions,
   updateCategory,
 } from "../controllers/categories.controller";
 import upload from "../middlewares/upload";
@@ -27,7 +26,6 @@ router
   );
 
 router.get("/with-products", getCategoriesWithProducts);
-router.get("/:id/options", protect, restrictTo("admin"), getCategoryOptions);
 router
   .route("/:id")
   .get(protect, restrictTo("admin"), getCategory)

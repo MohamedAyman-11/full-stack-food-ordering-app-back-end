@@ -58,13 +58,12 @@ model Product {
 }
 
 model Size {
-  id           String         @id @default(uuid())
-  name         String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  categorySize CategorySize[]
-  productSize  ProductSize[]
-  orderItems   OrderItem[]
+  id          String        @id @default(uuid())
+  name        String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  productSize ProductSize[]
+  orderItems  OrderItem[]
 }
 
 model ProductSize {
@@ -84,7 +83,6 @@ model Extra {
   name            String
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
-  categoryExtras  CategoryExtra[]
   productExtras   ProductExtra[]
   orderItemExtras OrderItemExtra[]
 }
@@ -102,32 +100,12 @@ model ProductExtra {
 }
 
 model Category {
-  id             String          @id @default(uuid())
-  name           String          @unique
-  createdAt      DateTime        @default(now())
-  image          Json
-  updatedAt      DateTime        @updatedAt
-  categoryExtras CategoryExtra[]
-  categorySizes  CategorySize[]
-  products       Product[]
-}
-
-model CategorySize {
-  categoryId String
-  sizeId     String
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  size       Size     @relation(fields: [sizeId], references: [id], onDelete: Cascade)
-
-  @@id([categoryId, sizeId])
-}
-
-model CategoryExtra {
-  categoryId String
-  extraId    String
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  extra      Extra    @relation(fields: [extraId], references: [id], onDelete: Cascade)
-
-  @@id([categoryId, extraId])
+  id        String    @id @default(uuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  image     Json
+  updatedAt DateTime  @updatedAt
+  products  Product[]
 }
 
 model Order {
@@ -155,7 +133,7 @@ model Order {
   paymentMethod    PaymentMethod
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
-  user             User          @relation("Ordering", fields: [userId], references: [id])
+  user             User          @relation("Ordering", fields: [userId], references: [id], onDelete: Cascade)
   orderItems       OrderItem[]
   payment          Payment?
   deliveryBoy      DeliveryBoy?  @relation(fields: [deliveryBoyId], references: [id])

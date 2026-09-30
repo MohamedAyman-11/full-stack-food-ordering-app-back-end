@@ -76,35 +76,10 @@ export const SizeSchema = z.object({
 
 export const createCategorySchema = z.object({
   name: z.string().trim().min(3, "Category name must be 3 character at least"),
-  extraIds: z.preprocess((value) => {
-    if (typeof value === "string") {
-      return JSON.parse(value);
-    }
-    return value;
-  }, z.array(z.uuid()).optional()),
-
-  sizeIds: z.preprocess((value) => {
-    if (typeof value === "string") {
-      return JSON.parse(value);
-    }
-    return value;
-  }, z.array(z.uuid()).optional()),
 });
 
 export const updateCategorySchema = z.object({
   name: z.string().trim().min(3, "Category name must be 3 character at least"),
-  sizeIds: z.preprocess((value) => {
-    if (typeof value === "string") {
-      return JSON.parse(value);
-    }
-    return value;
-  }, z.array(z.uuid()).optional()),
-  extraIds: z.preprocess((value) => {
-    if (typeof value === "string") {
-      return JSON.parse(value);
-    }
-    return value;
-  }, z.array(z.uuid()).optional()),
 });
 
 export const updateUserProfileSchema = z.object({
@@ -143,7 +118,7 @@ export const productSizeSchema = z.object({
 
   price: z.coerce
     .number("Price must be a valid number")
-    .positive("Price must be greater than 0")
+    .nonnegative("Price must be greater than or equal to 0")
     .multipleOf(0.01, "Price can have at most 2 decimal places"),
 });
 
@@ -154,7 +129,7 @@ export const productExtraSchema = z.object({
     .number("Price must be a valid number")
     .nonnegative("Price must be greater than or equal to 0")
     .multipleOf(0.01, "Price can have at most 2 decimal places")
-    .optional(),
+    .default(0),
 });
 
 export const ProductSchema = z.object({
@@ -178,14 +153,17 @@ export const ProductSchema = z.object({
 
   category: z.string().min(1, "Please select a category"),
 
-  sizes: z.preprocess((value) => {
-    if (typeof value !== "string") return value;
-    try {
-      return JSON.parse(value);
-    } catch (error) {
-      return value;
-    }
-  }, z.array(productSizeSchema).min(1, "At least one size is required").optional()),
+  sizes: z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return value;
+      try {
+        return JSON.parse(value);
+      } catch (error) {
+        return value;
+      }
+    },
+    z.array(productSizeSchema).min(1, "At least one size is required"),
+  ),
 
   extras: z.preprocess((value) => {
     if (typeof value !== "string") return value;
@@ -194,7 +172,7 @@ export const ProductSchema = z.object({
     } catch (error) {
       return value;
     }
-  }, z.array(productExtraSchema).min(1, "At least one extra is required").optional()),
+  }, z.array(productExtraSchema).optional()),
   isAvailable: z.preprocess((value) => value === "true", z.boolean()),
 });
 
@@ -245,10 +223,6 @@ export const orderSchema = z.object({
           .array(
             z.object({
               id: z.string().min(1, "Extra id is required"),
-              price: z.coerce
-                .number("Price must be a valid number")
-                .positive("Price must be greater than 0")
-                .multipleOf(0.01, "Price can have at most 2 decimal places"),
             }),
           )
           .optional(),
