@@ -38,57 +38,131 @@ export const createProductService = async ({ buffer, data }: CreateProduct) => {
     });
   }
 
+  // Validate category
+  const categoryExists = await db.category.findUnique({
+    where: { id: category },
+    select: { id: true },
+  });
+
+  if (!categoryExists) {
+    throw new AppError({
+      statusCode: 400,
+      message: "Category not found",
+    });
+  }
+
+  if (sizes && sizes.length > 0) {
+    // Validate duplicate sizes
+    const sizeIds = sizes.map((size) => size.id);
+
+    if (new Set(sizeIds).size !== sizeIds.length) {
+      throw new AppError({
+        statusCode: 400,
+        message: "Duplicate sizes are not allowed",
+      });
+    }
+
+    // Validate sizes exist
+    const existingSizes = await db.size.findMany({
+      where: {
+        id: {
+          in: sizeIds,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingSizes.length !== sizes.length) {
+      throw new AppError({
+        statusCode: 400,
+        message: "One or more sizes not found",
+      });
+    }
+  }
+
+  if (extras && extras.length > 0) {
+    // Validate duplicate extras
+    const extraIds = extras.map((extra) => extra.id);
+
+    if (new Set(extraIds).size !== extraIds.length) {
+      throw new AppError({
+        statusCode: 400,
+        message: "Duplicate extras are not allowed",
+      });
+    }
+
+    // Validate extras exist
+    const existingExtras = await db.extra.findMany({
+      where: {
+        id: {
+          in: extraIds,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingExtras.length !== extras.length) {
+      throw new AppError({
+        statusCode: 400,
+        message: "One or more extras not found",
+      });
+    }
+  }
+
   let image;
+
   try {
     const { url, public_id } = await uploadImage(buffer, "Products");
 
     image = { url, public_id };
 
-    const product = await db.$transaction(async (tx) => {
-      return tx.product.create({
-        data: {
-          name,
-          description,
-          price: String(price),
-          discount: String(discount),
-          image: {
-            url,
-            public_id,
-          },
-          slug: slugify(name, {
-            lower: true,
-            trim: true,
-          }),
-          categoryId: category,
-          isAvailable,
-
-          productSizes: sizes
-            ? {
-                create: sizes.map((size) => ({
-                  size: {
-                    connect: {
-                      id: size.id,
-                    },
-                  },
-                  price: String(size.price),
-                })),
-              }
-            : undefined,
-
-          productExtras: extras
-            ? {
-                create: extras.map((extra) => ({
-                  extra: {
-                    connect: {
-                      id: extra.id,
-                    },
-                  },
-                  price: String(extra.price),
-                })),
-              }
-            : undefined,
+    const product = await db.product.create({
+      data: {
+        name,
+        description,
+        price: String(price),
+        discount: String(discount),
+        image: {
+          url,
+          public_id,
         },
-      });
+        slug: slugify(name, {
+          lower: true,
+          trim: true,
+        }),
+        categoryId: category,
+        isAvailable,
+
+        productSizes: sizes
+          ? {
+              create: sizes.map((size) => ({
+                size: {
+                  connect: {
+                    id: size.id,
+                  },
+                },
+                price: String(size.price),
+              })),
+            }
+          : undefined,
+
+        productExtras: extras
+          ? {
+              create: extras.map((extra) => ({
+                extra: {
+                  connect: {
+                    id: extra.id,
+                  },
+                },
+                price: String(extra.price),
+              })),
+            }
+          : undefined,
+      },
     });
 
     return product;
@@ -255,6 +329,81 @@ export const updateProductService = async ({
     throw new AppError({ statusCode: 404, message: "Product not found" });
   }
 
+  // Validate category
+  const categoryExists = await db.category.findUnique({
+    where: { id: data.category },
+    select: { id: true },
+  });
+
+  if (!categoryExists) {
+    throw new AppError({
+      statusCode: 400,
+      message: "Category not found",
+    });
+  }
+
+  if (data.sizes && data.sizes.length > 0) {
+    // Validate duplicate sizes
+    const sizeIds = data.sizes.map((size) => size.id);
+
+    if (new Set(sizeIds).size !== sizeIds.length) {
+      throw new AppError({
+        statusCode: 400,
+        message: "Duplicate sizes are not allowed",
+      });
+    }
+
+    // Validate sizes exist
+    const existingSizes = await db.size.findMany({
+      where: {
+        id: {
+          in: sizeIds,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingSizes.length !== data.sizes.length) {
+      throw new AppError({
+        statusCode: 400,
+        message: "One or more sizes not found",
+      });
+    }
+  }
+
+  if (data.extras && data.extras.length > 0) {
+    // Validate duplicate extras
+    const extraIds = data.extras.map((extra) => extra.id);
+
+    if (new Set(extraIds).size !== extraIds.length) {
+      throw new AppError({
+        statusCode: 400,
+        message: "Duplicate extras are not allowed",
+      });
+    }
+
+    // Validate extras exist
+    const existingExtras = await db.extra.findMany({
+      where: {
+        id: {
+          in: extraIds,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingExtras.length !== data.extras.length) {
+      throw new AppError({
+        statusCode: 400,
+        message: "One or more extras not found",
+      });
+    }
+  }
+
   type ProductImage = {
     url: string;
     public_id: string;
@@ -291,7 +440,7 @@ export const updateProductService = async ({
                 price: size.price,
               })),
             }
-          : undefined,
+          : { deleteMany: {} },
         productExtras: data.extras
           ? {
               deleteMany: {},
@@ -304,7 +453,7 @@ export const updateProductService = async ({
                 price: extra.price ?? 0,
               })),
             }
-          : undefined,
+          : { deleteMany: {} },
       },
     });
 

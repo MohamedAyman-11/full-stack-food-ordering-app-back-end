@@ -78,9 +78,7 @@ export const createCategorySchema = z.object({
   name: z.string().trim().min(3, "Category name must be 3 character at least"),
 });
 
-export const updateCategorySchema = z.object({
-  name: z.string().trim().min(3, "Category name must be 3 character at least"),
-});
+export const updateCategorySchema = createCategorySchema;
 
 export const updateUserProfileSchema = z.object({
   firstName: z.string().trim().min(2, "First name is required"),
@@ -119,7 +117,8 @@ export const productSizeSchema = z.object({
   price: z.coerce
     .number("Price must be a valid number")
     .nonnegative("Price must be greater than or equal to 0")
-    .multipleOf(0.01, "Price can have at most 2 decimal places"),
+    .multipleOf(0.01, "Price can have at most 2 decimal places")
+    .default(0),
 });
 
 export const productExtraSchema = z.object({
